@@ -170,9 +170,6 @@ with tab3:
 # =========================================================
 # TEXT TAB
 # =========================================================
-# =========================================================
-# TEXT TAB
-# =========================================================
 with tab4:
     st.header("Text logging")
 
@@ -184,19 +181,14 @@ with tab4:
         foods_raw = extract_food_items(text)
 
         if foods_raw:
-            # 🔹 Aggregate duplicates
-            foods_agg = {}
+            # 🔹 Make unique list without doubling quantity
+            foods_seen = {}
             for f in foods_raw:
                 key = f["food"]
-                if key in foods_agg:
-                    # Sum quantities if food already exists
-                    foods_agg[key]["quantity"] += f["quantity"]
-                    # Keep the highest confidence
-                    foods_agg[key]["confidence"] = max(foods_agg[key]["confidence"], f["confidence"])
-                else:
-                    foods_agg[key] = f.copy()
+                if key not in foods_seen:
+                    foods_seen[key] = f.copy()
 
-            foods = list(foods_agg.values())
+            foods = list(foods_seen.values())
 
             portions = estimate_portion(foods)
             meal = calculate_meal_totals(portions)
