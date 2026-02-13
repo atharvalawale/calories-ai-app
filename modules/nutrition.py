@@ -1,11 +1,13 @@
 import csv
 from pathlib import Path
 
+# Global dictionary to store nutrition data
 NUTRITION_DB = {}
 
 def load_nutrition_data(csv_path="data/nutrition.csv"):
     """
     Loads nutrition data from CSV into a dictionary.
+    Call this once at app startup.
     """
     global NUTRITION_DB
     NUTRITION_DB = {}
@@ -32,10 +34,20 @@ def load_nutrition_data(csv_path="data/nutrition.csv"):
 def get_food_nutrition(food_name):
     """
     Returns nutrition data for a given food.
+    Maps detected food names to CSV entries if necessary.
     """
     if not NUTRITION_DB:
         raise RuntimeError("Nutrition database not loaded. Call load_nutrition_data() first.")
 
     food_name = food_name.strip().lower()
 
-    return NUTRITION_DB.get(food_name)
+    # Minimal mapping for foods that don't match CSV exactly
+    food_map = {
+        "egg": "egg_boiled",
+        "chicken": "chicken_grilled"
+        # Add more mappings if needed
+    }
+
+    db_food_name = food_map.get(food_name, food_name)
+
+    return NUTRITION_DB.get(db_food_name)

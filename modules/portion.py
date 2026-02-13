@@ -1,48 +1,35 @@
-# Portion size assumptions in grams
-# These are heuristic defaults for MVP (explainable & adjustable)
-
-UNIT_TO_GRAMS = {
-    "bowl": 150,
-    "plate": 200,
-    "cup": 120,
-    "piece": 60,
-    "pieces": 60,
-    "unit": 100  # fallback when unit is unknown
-}
-
-# Food-specific overrides (per piece or per unit)
-FOOD_UNIT_GRAMS = {
-    "roti": 60,          # per piece
-    "egg": 50,           # per egg
-    "chicken": 150,      # per serving
-    "paneer": 100,       # per serving
-    "salad": 100,
-    "rice": 150,
-    "dal": 150
-}
-
-
-def estimate_portion(food, quantity, unit):
+def estimate_portion(detected_foods):
     """
-    Estimate portion size in grams for a given food.
-    Returns grams and an explanation string.
+    Input:
+    [{'food': 'salad', 'quantity': 1, 'unit': 'unit'}]
+
+    Output:
+    [{'food': 'salad', 'grams': 100}]
     """
-    food = food.lower()
-    unit = unit.lower()
 
-    # Determine base grams
-    if food in FOOD_UNIT_GRAMS:
-        base_grams = FOOD_UNIT_GRAMS[food]
-        source = f"food-specific assumption ({base_grams}g per {unit})"
-    else:
-        base_grams = UNIT_TO_GRAMS.get(unit, UNIT_TO_GRAMS["unit"])
-        source = f"unit-based assumption ({base_grams}g per {unit})"
+    PORTION_DB = {
+        "rice": 200,
+        "pizza": 150,
+        "salad": 100,
+        "roti": 50,
+        "dal": 180,
+        "egg_boiled": 60,       # FIXED: match parser output & CSV
+        "chicken_grilled": 200, # FIXED: match parser output & CSV
+        "paneer": 120
+    }
 
-    total_grams = base_grams * quantity
+    portions = []
 
-    explanation = (
-        f"Assumed {base_grams}g per {unit} for {food}. "
-        f"Quantity: {quantity}. Total: {total_grams}g."
-    )
+    for item in detected_foods:
+        food = item["food"]
+        qty = item.get("quantity", 1)
 
-    return total_grams, explanation
+        base = PORTION_DB.get(food, 100)
+        total = base * qty
+
+        portions.append({
+            "food": food,
+            "grams": total   # IMPORTANT → only number, not tuple
+        })
+
+    return portions
