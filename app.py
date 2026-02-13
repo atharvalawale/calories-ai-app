@@ -29,13 +29,28 @@ tab1, tab2, tab3, tab4 = st.tabs([
 with tab1:
     st.header("Image calorie estimation")
 
+    # Upload option (your original)
     img = st.file_uploader("Upload food image", type=["jpg","png","jpeg"])
 
+    # NEW: camera option
+    cam_img = st.camera_input("Or use live camera")
+
+    path = None
+
+    # If user uploads file
     if img:
         with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as tmp:
             tmp.write(img.read())
             path = tmp.name
 
+    # If user uses camera
+    elif cam_img:
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as tmp:
+            tmp.write(cam_img.read())
+            path = tmp.name
+
+    # Run model (same as your original)
+    if path:
         st.image(path, use_column_width=True)
 
         foods = predict_food(path)
@@ -55,6 +70,7 @@ with tab1:
         st.success(f"Confidence: {conf}%")
 
         os.remove(path)
+
         st.info("Assumptions: Portion size estimated using heuristic rules and a small nutrition database.")
         st.caption("⚠️ This is an AI-based estimate, not medical or dietary advice.")
 
