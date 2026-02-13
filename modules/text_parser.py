@@ -1,17 +1,13 @@
 import re
 
-# Default unit if not specified
 DEFAULT_UNIT = "unit"
 
-# Word-based quantities
 WORD_TO_NUMBER = {
     "one": 1, "two": 2, "three": 3, "four": 4, "five": 5
 }
 
-# Known food keywords (for detection in text)
 KNOWN_FOODS = ["rice", "roti", "dal", "salad", "chicken", "egg", "eggs", "paneer", "boiled egg"]
 
-# Map text mentions to nutrition CSV keys
 FOOD_ALIASES = {
     "egg": "egg_boiled",
     "eggs": "egg_boiled",
@@ -24,8 +20,10 @@ FOOD_ALIASES = {
     "paneer": "paneer"
 }
 
-# Known units
 KNOWN_UNITS = ["bowl", "plate", "piece", "pieces", "cup", "cups"]
+
+# separators for multiple foods
+SEPARATORS = r",|and|with|plus"
 
 def extract_food_items(text):
     """
@@ -35,30 +33,32 @@ def extract_food_items(text):
     text = text.lower()
     results = []
 
-    for food in KNOWN_FOODS:
-        # Regex to find food with optional numeric quantity
-        pattern = r"(\d+)?\s*(?:{})".format(re.escape(food))
-        matches = re.finditer(pattern, text)
+    # Split text by separators (and, with, plus, comma)
+    parts = re.split(SEPARATORS, text)
 
-        for m in matches:
-            qty = m.group(1)
-            quantity = int(qty) if qty else 1
-            unit = DEFAULT_UNIT
+    for part in parts:
+        part = part.strip()
+        for food in KNOWN_FOODS:
+            if food in part:
+                # Extract numeric quantity if present
+                qty_match = re.search(r"(\d+)", part)
+                quantity = int(qty_match.group(1)) if qty_match else 1
 
-            # Check for unit before or after food
-            for u in KNOWN_UNITS:
-                if f"{u} of {food}" in text or f"{food} {u}" in text:
-                    unit = u
-                    break
+                # Detect unit if mentioned
+                unit = DEFAULT_UNIT
+                for u in KNOWN_UNITS:
+                    if f"{u} of {food}" in part or f"{food} {u}" in part:
+                        unit = u
+                        break
 
-            # Map to nutrition database key
-            key = FOOD_ALIASES.get(food)
-            if key:
-                results.append({
-                    "food": key,
-                    "quantity": quantity,
-                    "unit": unit,
-                    "confidence": 80  # Default confidence for text input
-                })
+                # Map to nutrition database key
+                key = FOOD_ALIASES.get(food)
+                if key:
+                    results.append({
+                        "food": key,
+                        "quantity": quantity,
+                        "unit": unit,
+                        "confidence": 80
+                    })
 
     return results

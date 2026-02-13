@@ -176,21 +176,22 @@ with tab4:
     text = st.text_input("Enter meal description")
 
     if text:
-        words = text.lower().split()
-        foods = []
+        from modules.text_parser import extract_food_items  # make sure this file has the improved parser
 
-        for w in words:
-            foods.append({
-                "food": w,
-                "quantity": 1,
-                "unit": "unit",
-                "confidence": 85
-            })
+        # Use the robust parser that handles 'and', 'with', 'plus', ',' etc.
+        foods = extract_food_items(text)
 
-        portions = estimate_portion(foods)
-        meal = calculate_meal_totals(portions)
+        if foods:
+            portions = estimate_portion(foods)
+            meal = calculate_meal_totals(portions)
 
-        st.subheader("Meal Summary")
-        st.json(meal)
-        st.info("Assumptions: Default portion used for detected foods from text input.")
-        st.caption("⚠️ This is an AI-based estimate, not medical or dietary advice.")
+            st.subheader("Detected Foods")
+            st.json(foods)
+
+            st.subheader("Meal Summary")
+            st.json(meal)
+
+            st.info("Assumptions: Portion size estimated using default rules for detected foods.")
+            st.caption("⚠️ This is an AI-based estimate, not medical or dietary advice.")
+        else:
+            st.error("No known foods detected in text input.")
