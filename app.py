@@ -170,18 +170,34 @@ with tab3:
 # =========================================================
 # TEXT TAB
 # =========================================================
+# =========================================================
+# TEXT TAB
+# =========================================================
 with tab4:
     st.header("Text logging")
 
     text = st.text_input("Enter meal description")
 
     if text:
-        from modules.text_parser import extract_food_items  # make sure this file has the improved parser
+        from modules.text_parser import extract_food_items  # robust parser handling 'and', 'with', 'plus', ','
 
-        # Use the robust parser that handles 'and', 'with', 'plus', ',' etc.
-        foods = extract_food_items(text)
+        foods_raw = extract_food_items(text)
 
-        if foods:
+        if foods_raw:
+            # 🔹 Aggregate duplicates
+            foods_agg = {}
+            for f in foods_raw:
+                key = f["food"]
+                if key in foods_agg:
+                    # Sum quantities if food already exists
+                    foods_agg[key]["quantity"] += f["quantity"]
+                    # Keep the highest confidence
+                    foods_agg[key]["confidence"] = max(foods_agg[key]["confidence"], f["confidence"])
+                else:
+                    foods_agg[key] = f.copy()
+
+            foods = list(foods_agg.values())
+
             portions = estimate_portion(foods)
             meal = calculate_meal_totals(portions)
 
