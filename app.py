@@ -9,9 +9,12 @@ from modules.portion import estimate_portion
 from modules.calorie_calculator import calculate_meal_totals
 from modules.confidence import compute_confidence
 from modules.nutrition import load_nutrition_data
+from modules.text_parser import extract_food_items
 
-# load nutrition DB once
+# Load nutrition DB once
 load_nutrition_data()
+
+SUPPORTED_FOODS = ['dal','egg','paneer','pizza','rice','roti','salad']
 
 st.set_page_config(page_title="Calories AI", layout="centered")
 st.title("🍱 Calories AI App")
@@ -29,37 +32,37 @@ tab1, tab2, tab3, tab4 = st.tabs([
 with tab1:
     st.header("Image calorie estimation")
 
-    # Upload option (your original)
     img = st.file_uploader("Upload food image", type=["jpg","png","jpeg"])
-
-    # NEW: camera option
     cam_img = st.camera_input("Or use live camera")
 
     path = None
 
-    # If user uploads file
     if img:
         with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as tmp:
             tmp.write(img.read())
             path = tmp.name
 
-    # If user uses camera
     elif cam_img:
         with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as tmp:
             tmp.write(cam_img.read())
             path = tmp.name
 
-    # Run model (same as your original)
     if path:
         st.image(path, use_column_width=True)
 
         foods = predict_food(path)
+
+        # 🔥 ALWAYS CONTINUE PIPELINE
         portions = estimate_portion(foods)
         meal = calculate_meal_totals(portions)
         conf = compute_confidence(foods)
 
         st.subheader("Detected Food")
         st.json(foods)
+
+        # If low confidence → just warn (DO NOT STOP)
+        if foods[0]["confidence"] < 50:
+            st.warning("Low confidence prediction — calories estimated using best guess.")
 
         st.subheader("Portions")
         st.json(portions)
@@ -71,8 +74,8 @@ with tab1:
 
         os.remove(path)
 
-        st.info("Assumptions: Portion size estimated using heuristic rules and a small nutrition database.")
-        st.caption("⚠️ This is an AI-based estimate, not medical or dietary advice.")
+        st.info("Assumptions: Portion estimated using heuristic rules and nutrition DB.")
+        st.caption("⚠️ AI estimate only, not medical advice.")
 
 
 # =========================================================
@@ -102,19 +105,16 @@ with tab2:
                 cv2.imwrite(frame_path, frame)
 
                 foods = predict_food(frame_path)
+                name = foods[0]["food"]
 
-                # 🔴 FIX: avoid duplicates across frames
-                for f in foods:
-                    name = f["food"]
+                exists = False
+                for e in foods_all:
+                    if e["food"] == name:
+                        exists = True
+                        break
 
-                    exists = False
-                    for e in foods_all:
-                        if e["food"] == name:
-                            exists = True
-                            break
-
-                    if not exists:
-                        foods_all.append(f)
+                if not exists:
+                    foods_all.append(foods[0])
 
             frame_count += 1
 
@@ -133,10 +133,10 @@ with tab2:
 
             st.success(f"Confidence: {conf}%")
         else:
-            st.error("No food detected")
-        st.info("Assumptions: Foods aggregated from sampled video frames and mapped to standard nutrition values.")
-        st.caption("⚠️ This is an AI-based estimate, not medical or dietary advice.")
+            st.error("No food detected in video.")
 
+        st.info("Assumptions: Foods aggregated from sampled frames.")
+        st.caption("⚠️ AI estimate only.")
 
 
 # =========================================================
@@ -164,23 +164,28 @@ with tab3:
             foods = []
 
             for w in words:
-                foods.append({
-                    "food": w,
-                    "quantity": 1,
-                    "unit": "unit",
-                    "confidence": 80
-                })
+                if w in SUPPORTED_FOODS:
+                    foods.append({
+                        "food": w,
+                        "quantity": 1,
+                        "unit": "unit",
+                        "confidence": 80
+                    })
 
-            portions = estimate_portion(foods)
-            meal = calculate_meal_totals(portions)
+            if foods:
+                portions = estimate_portion(foods)
+                meal = calculate_meal_totals(portions)
 
-            st.subheader("Meal Summary")
-            st.json(meal)
+                st.subheader("Meal Summary")
+                st.json(meal)
+            else:
+                st.warning("No supported foods detected in speech.")
 
         except:
             st.error("Voice not recognized")
-            st.info("Assumptions: Foods extracted from speech and mapped to default portion sizes.")
-            st.caption("⚠️ This is an AI-based estimate, not medical or dietary advice.")
+
+        st.info("Assumptions: Foods extracted from speech.")
+        st.caption("⚠️ AI estimate only.")
 
 
 # =========================================================
@@ -192,20 +197,14 @@ with tab4:
     text = st.text_input("Enter meal description")
 
     if text:
-        from modules.text_parser import extract_food_items  # robust parser handling 'and', 'with', 'plus', ','
-
         foods_raw = extract_food_items(text)
 
-        if foods_raw:
-            # 🔹 Make unique list without doubling quantity
-            foods_seen = {}
-            for f in foods_raw:
-                key = f["food"]
-                if key not in foods_seen:
-                    foods_seen[key] = f.copy()
+        foods = []
+        for f in foods_raw:
+            if f["food"] in SUPPORTED_FOODS:
+                foods.append(f)
 
-            foods = list(foods_seen.values())
-
+        if foods:
             portions = estimate_portion(foods)
             meal = calculate_meal_totals(portions)
 
@@ -214,8 +213,8 @@ with tab4:
 
             st.subheader("Meal Summary")
             st.json(meal)
-
-            st.info("Assumptions: Portion size estimated using default rules for detected foods.")
-            st.caption("⚠️ This is an AI-based estimate, not medical or dietary advice.")
         else:
-            st.error("No known foods detected in text input.")
+            st.warning("No supported foods detected.")
+
+        st.info("Assumptions: Portion estimated using default rules.")
+        st.caption("⚠️ AI estimate only.")
