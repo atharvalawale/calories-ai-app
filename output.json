@@ -1,0 +1,33 @@
+{
+    "detected_food": [
+        {
+            "food": "salad",
+            "quantity": 1,
+            "unit": "unit",
+            "confidence": 46.62
+        }
+    ],
+    "portions": [
+        {
+            "food": "salad",
+            "grams": 100
+        }
+    ],
+    "meal": {
+        "items": [
+            {
+                "food": "salad",
+                "grams": 100,
+                "calories": 40.0,
+                "protein": 2.0,
+                "carbs": 7.0,
+                "fat": 0.2
+            }
+        ],
+        "total_calories": 40.0,
+        "total_protein": 2.0,
+        "total_carbs": 7.0,
+        "total_fat": 0.2
+    },
+    "confidence": 46.62
+}
