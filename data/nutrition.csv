@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 food,calories_100g,protein,carbs,fat,sugar,sodium
 rice,130,2.7,28,0.3,0.1,1
 dal,120,9,18,3,2,5
@@ -6,3 +7,12 @@ roti,300,8,50,7,2,250
 egg_boiled,155,13,1.1,11,1.1,124
 paneer,265,18,6,20,1.2,22
 pizza,266,11,33,10,3.6,640
+=======
+food,calories_100g,protein,carbs,fat
+rice,130,2.7,28,0.3
+dal,120,9,18,3
+salad,40,2,7,0.2
+roti,300,8,50,7
+egg_boiled,155,13,1.1,11
+paneer,265,18,6,20
+>>>>>>> 0b17e81dcefa826614e4d2c4e1e0748f61fcb827
