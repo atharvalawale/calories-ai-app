@@ -1,64 +1,48 @@
-import re
+import anthropic
+import json
 
-DEFAULT_UNIT = "unit"
+client = anthropic.Anthropic()
 
-WORD_TO_NUMBER = {
-    "one": 1, "two": 2, "three": 3, "four": 4, "five": 5
-}
 
-KNOWN_FOODS = ["rice", "roti", "dal", "salad", "chicken", "egg", "eggs", "paneer", "boiled egg"]
-
-FOOD_ALIASES = {
-    "egg": "egg_boiled",
-    "eggs": "egg_boiled",
-    "boiled egg": "egg_boiled",
-    "chicken": "chicken_grilled",
-    "rice": "rice",
-    "roti": "roti",
-    "dal": "dal",
-    "salad": "salad",
-    "paneer": "paneer"
-}
-
-KNOWN_UNITS = ["bowl", "plate", "piece", "pieces", "cup", "cups"]
-
-# separators for multiple foods
-SEPARATORS = r",|and|with|plus"
-
-def extract_food_items(text):
+def extract_food_items(text: str) -> list:
     """
-    Extracts food items, quantities, and units from input text.
-    Returns a list of dicts compatible with the calorie calculator.
+    Extracts food items, quantities, and units from any natural language text.
+    Uses Claude API — works for any food, any language, any phrasing.
+    Replaces the 9-food hardcoded keyword matcher.
     """
-    text = text.lower()
-    results = []
+    if not text or not text.strip():
+        return []
 
-    # Split text by separators (and, with, plus, comma)
-    parts = re.split(SEPARATORS, text)
+    response = client.messages.create(
+        model="claude-sonnet-4-20250514",
+        max_tokens=500,
+        messages=[{
+            "role": "user",
+            "content": (
+                f"Extract all food items from this text: '{text}'\n"
+                "For each food item:\n"
+                "- Use lowercase underscored names (e.g. chicken_grilled, egg_boiled, white_rice, dal)\n"
+                "- Estimate quantity (number) and unit (piece/bowl/cup/grams/plate)\n"
+                "- Estimate grams as best you can\n"
+                "- Set confidence 0-100\n"
+                "Respond ONLY with valid JSON, no markdown, no extra text:\n"
+                '[{"food": "egg_boiled", "quantity": 2, "unit": "piece", "grams": 110, "confidence": 95}]'
+            )
+        }]
+    )
 
-    for part in parts:
-        part = part.strip()
-        for food in KNOWN_FOODS:
-            if food in part:
-                # Extract numeric quantity if present
-                qty_match = re.search(r"(\d+)", part)
-                quantity = int(qty_match.group(1)) if qty_match else 1
+    raw = response.content[0].text.strip().strip("```json").strip("```").strip()
 
-                # Detect unit if mentioned
-                unit = DEFAULT_UNIT
-                for u in KNOWN_UNITS:
-                    if f"{u} of {food}" in part or f"{food} {u}" in part:
-                        unit = u
-                        break
+    try:
+        items = json.loads(raw)
+    except json.JSONDecodeError:
+        return []
 
-                # Map to nutrition database key
-                key = FOOD_ALIASES.get(food)
-                if key:
-                    results.append({
-                        "food": key,
-                        "quantity": quantity,
-                        "unit": unit,
-                        "confidence": 80
-                    })
+    # Ensure all required fields exist
+    for item in items:
+        item.setdefault("quantity", 1)
+        item.setdefault("unit", "unit")
+        item.setdefault("grams", 100)
+        item.setdefault("confidence", 80)
 
-    return results
+    return items

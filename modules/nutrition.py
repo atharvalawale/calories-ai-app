@@ -1,18 +1,30 @@
 import csv
 from pathlib import Path
 
-# Global dictionary to store nutrition data
+# Resolve paths relative to this file so it works from any directory
+BASE_DIR = Path(__file__).parent.parent
+DEFAULT_CSV = BASE_DIR / "data" / "nutrition.csv"
+
+# Global nutrition database loaded once at startup
 NUTRITION_DB = {}
 
+# Single shared alias map — imported by text_parser.py too
+FOOD_ALIAS_MAP = {
+    "egg": "egg_boiled",
+    "eggs": "egg_boiled",
+    "boiled egg": "egg_boiled",
+    "chicken": "chicken_grilled",
+}
 
-def normalize_food_name(food_name: str):
+
+def normalize_food_name(food_name: str) -> str:
     return food_name.strip().lower()
 
 
-def load_nutrition_data(csv_path="data/nutrition.csv"):
+def load_nutrition_data(csv_path=DEFAULT_CSV) -> dict:
     """
     Loads nutrition data from CSV into memory.
-    Call this once at app startup.
+    Call once at app startup.
     """
     global NUTRITION_DB
     NUTRITION_DB = {}
@@ -27,35 +39,28 @@ def load_nutrition_data(csv_path="data/nutrition.csv"):
 
         for row in reader:
             food = normalize_food_name(row["food"])
-
             NUTRITION_DB[food] = {
                 "calories_100g": float(row["calories_100g"]),
                 "protein": float(row["protein"]),
                 "carbs": float(row["carbs"]),
                 "fat": float(row["fat"]),
-                "sugar": float(row.get("sugar", 0)),
-                "sodium": float(row.get("sodium", 0)),
+                "sugar": float(row.get("sugar", 0) or 0),
+                "sodium": float(row.get("sodium", 0) or 0),
             }
 
     return NUTRITION_DB
 
 
-def get_food_nutrition(food_name):
+def get_food_nutrition(food_name: str) -> dict | None:
     """
-    Returns nutrition data for a given food.
-    Applies minimal mapping if needed.
+    Returns nutrition data for a food name.
+    Applies alias mapping for common name variants.
+    Returns None if not found — caller must handle this.
     """
     if not NUTRITION_DB:
-        raise RuntimeError("Nutrition database not loaded. Call load_nutrition_data() first.")
+        raise RuntimeError("Nutrition DB not loaded. Call load_nutrition_data() first.")
 
     food_name = normalize_food_name(food_name)
+    db_key = FOOD_ALIAS_MAP.get(food_name, food_name)
 
-    # Optional mapping for mismatched detector names
-    food_map = {
-        "egg": "egg_boiled",
-        "chicken": "chicken_grilled",
-    }
-
-    db_food_name = food_map.get(food_name, food_name)
-
-    return NUTRITION_DB.get(db_food_name)
+    return NUTRITION_DB.get(db_key)  # None if not found
