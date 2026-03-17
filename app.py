@@ -65,26 +65,63 @@ allergies = st.session_state.allergies
 
 def display_meal_results(meal: dict, foods: list, key: str):
     """Shared UI block used by all tabs."""
-    score, category = compute_meal_health_score(meal)
-    warnings, modifier = apply_personalization(meal, goal=goal, allergies=allergies)
-    final_score = max(score + modifier, 0)
 
+    # ── Health Score ───────────────────────────────────────────────────────────
+    # WHY 3 values: we updated health_score.py to also return a breakdown
+    # breakdown tells us EXACTLY what hurt and helped the score
+    score, category, breakdown = compute_meal_health_score(meal)
+
+    # WHY apply_personalization after health score:
+    # personalization adds an extra modifier based on user goal
+    # e.g. high calorie meal for weight_loss goal → modifier = -15
+    warnings, modifier = apply_personalization(meal, goal=goal, allergies=allergies)
+
+    # WHY max(..., 0): modifier can push score below 0 — we clamp it
+    final_score = min(max(round(score + modifier, 1), 0), 100)
+
+    # ── Nutrition Summary ──────────────────────────────────────────────────────
     st.subheader("Nutrition Summary")
     st.json(meal)
 
-    st.metric("Health Score", f"{final_score} / 100")
-    st.write("Category:", category)
+    # ── Health Score Display ───────────────────────────────────────────────────
+    # WHY two columns: shows score and category side by side — cleaner UI
+    col1, col2 = st.columns(2)
+    with col1:
+        st.metric("Health Score", f"{final_score} / 100")
+    with col2:
+        st.metric("Category", category)
 
+    # ── Score Breakdown ────────────────────────────────────────────────────────
+    # WHY show breakdown: users can see EXACTLY what hurt/helped their score
+    # This is much more useful than just showing a number
+    with st.expander("🔍 See what affected your score"):
+        st.write("**What hurt your score (penalties):**")
+        penalties = breakdown["penalties"]
+        st.write(f"- Sugar: -{penalties['sugar']} points")
+        st.write(f"- Sodium: -{penalties['sodium']} points")
+        st.write(f"- Fat: -{penalties['fat']} points")
+        st.write(f"- Calories: -{penalties['calories']} points")
+
+        st.write("**What helped your score (rewards):**")
+        rewards = breakdown["rewards"]
+        st.write(f"- Protein: +{rewards['protein']} points")
+        st.write(f"- Fiber: +{rewards['fiber']} points")
+
+    # ── Warnings ───────────────────────────────────────────────────────────────
     if warnings:
         st.warning(warnings)
 
+    # ── Skipped Foods ──────────────────────────────────────────────────────────
+    # WHY show skipped: user should know if some foods were not calculated
     if meal.get("skipped_foods"):
         st.info(f"Could not find nutrition data for: {', '.join(meal['skipped_foods'])}")
 
+    # ── Model Confidence ───────────────────────────────────────────────────────
     if foods:
         conf = compute_confidence(foods)
         st.success(f"Model Confidence: {conf}%")
 
+    # ── Add to Log ─────────────────────────────────────────────────────────────
     if st.button("Add to Daily Log", key=key):
         st.session_state.daily_log.append(meal)
         st.success("Meal added to daily log!")

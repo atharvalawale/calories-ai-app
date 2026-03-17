@@ -8,7 +8,6 @@ def compute_confidence(detected_foods):
     for item in detected_foods:
         conf = item.get("confidence")
 
-        # skip invalid values
         if conf is None:
             continue
 

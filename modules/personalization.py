@@ -17,30 +17,25 @@ def apply_personalization(meal, goal=None, allergies=None):
     warnings = []
     modifier = 0
 
-    # Goal-based calorie check
     if goal and goal in GOAL_CALORIE_LIMITS:
         limit = GOAL_CALORIE_LIMITS[goal]
         if meal["total_calories"] > limit:
             warnings.append(f"High calorie meal for {goal.replace('_', ' ')} goal (>{limit} kcal)")
             modifier -= 15
 
-    # Muscle gain — check protein is sufficient
     if goal == "muscle_gain":
         if meal.get("total_protein", 0) < GOAL_PROTEIN_TARGETS["muscle_gain"]:
             warnings.append("Low protein for muscle gain goal (<30g per meal)")
             modifier -= 10
 
-    # Sodium warning
     if meal.get("total_sodium", 0) > 800:
         warnings.append("High sodium meal (>800mg)")
         modifier -= 5
 
-    # Sugar warning
     if meal.get("total_sugar", 0) > 20:
         warnings.append("High sugar content (>20g)")
         modifier -= 5
 
-    # Allergy check — check both food key and ingredients text
     if allergies:
         for item in meal.get("items", []):
             food_text = (

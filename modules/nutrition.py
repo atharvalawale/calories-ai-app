@@ -1,14 +1,11 @@
 import csv
 from pathlib import Path
 
-# Resolve paths relative to this file so it works from any directory
 BASE_DIR = Path(__file__).parent.parent
 DEFAULT_CSV = BASE_DIR / "data" / "nutrition.csv"
 
-# Global nutrition database loaded once at startup
 NUTRITION_DB = {}
 
-# Single shared alias map — imported by text_parser.py too
 FOOD_ALIAS_MAP = {
     "egg": "egg_boiled",
     "eggs": "egg_boiled",
@@ -63,4 +60,4 @@ def get_food_nutrition(food_name: str) -> dict | None:
     food_name = normalize_food_name(food_name)
     db_key = FOOD_ALIAS_MAP.get(food_name, food_name)
 
-    return NUTRITION_DB.get(db_key)  # None if not found
+    return NUTRITION_DB.get(db_key)  
