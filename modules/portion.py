@@ -145,33 +145,23 @@ def estimate_portion(detected_foods: list) -> list:
             total = gemini_grams * qty
 
         else:
-            # WHY: Fall back to our lookup table if Gemini didn't estimate grams
-            # PORTION_DB.get(food, DEFAULT_GRAMS):
-            #   → looks up food in our DB
-            #   → if not found, uses 100g (reasonable average)
+ 
             base = PORTION_DB.get(food, DEFAULT_GRAMS)
 
-            # WHY: Adjust for the unit (cup vs plate vs bowl)
+           
             multiplier = UNIT_MULTIPLIERS.get(unit, DEFAULT_MULTIPLIER)
 
-            # WHY: Multiply all three together
-            # Example: 2 plates of rice = 200 (base) × 1.5 (plate) × 2 (qty) = 600g
+
             total = base * multiplier * qty
 
-        # ── Step 3: Safety check ────────────────────────────────────────────────
-        # WHY: Prevents absurd values like 0g or negative grams
-        # which would cause division errors in calorie_calculator.py
+
         total = max(total, 1)
 
-        # ── Step 4: Add to results ──────────────────────────────────────────────
-        # WHY round(): Calories don't need decimal precision like 203.57142g
-        # Cleaner numbers are easier to read and display
+   
         portions.append({
             "food": food,
             "grams": round(total)
         })
 
-    # WHY return here and not inside loop:
-    # We want ALL items processed before returning.
-    # Returning inside the loop would stop after the first food.
+
     return portions
