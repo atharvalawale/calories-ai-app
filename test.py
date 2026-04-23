@@ -1,11 +1,8 @@
-from modules.nutrition import load_nutrition_data, get_food_nutrition
+from google import genai
+import os
+from dotenv import load_dotenv
+load_dotenv()
 
-# Load nutrition data
-load_nutrition_data()
-
-# Test known foods
-print("Rice:", get_food_nutrition("rice"))
-print("Dal:", get_food_nutrition("dal"))
-
-# Test unknown food
-print("Pizza:", get_food_nutrition("pizza"))
+client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
+for m in client.models.list():
+    print(m.name)
